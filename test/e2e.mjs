@@ -2622,6 +2622,54 @@ for (const [width, height, touch] of [[320, 568, true], [360, 740, true], [390, 
   await p.context().close();
 }
 
+// A Back that comes while a finger is turning the paper, or just after the browser took a touch away from it (as
+// Android's back gesture does when a finger near the screen's side is taken for it), is taken for a slip: the model
+// stays, with its step put back in the history, and the fold and the view are as they were. The back arrow still goes
+// back at once, and a second after a touch was taken, Back goes to the gallery in one press as it always has.
+{
+  const p = await fresh();
+  await p.click('.model[data-model="crane"]');
+  await p.waitForFunction(() => fold.state.id === 'crane');
+  await p.click('#play');
+  await p.waitForFunction(() => fold.state.t >= 1 && location.hash === '#crane-1', null, { timeout: 15000 }); // the address has caught up
+  const steps = await p.evaluate(() => history.length);
+  const look = () => p.evaluate(() => ({ hash: location.hash, player: !document.getElementById('player').hidden, state: fold.state, yaw: Math.round(fold.view().cam.yaw) }));
+  const cdp = await p.context().newCDPSession(p);
+  const box = await p.locator('#gl').boundingBox();
+  const at = (dx = 0) => [{ x: box.x + box.width / 2 + dx, y: box.y + box.height / 2 }];
+  const touch = (type, touchPoints = []) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+  // Back in the middle of turning the paper: the model stays, and the paper goes on turning.
+  await touch('touchStart', at()); await touch('touchMove', at(30));
+  const mid = await look();
+  assert.ok(mid.player && mid.hash.startsWith('#crane'));
+  await p.evaluate(() => history.back());
+  await p.waitForTimeout(400);
+  assert.deepEqual(await look(), mid, 'Back in the middle of turning the paper should keep the model as it was');
+  await touch('touchMove', at(90)); await touch('touchEnd');
+  await p.waitForTimeout(100);
+  assert.notEqual((await look()).yaw, mid.yaw, 'the paper should go on turning after a Back taken for a slip');
+  assert.equal(await p.evaluate(() => history.length), steps, 'the model should still have one step in the history');
+  // The browser takes the touch (pointercancel) and a Back follows: the model stays as it was.
+  const now = await look();
+  await touch('touchStart', at()); await touch('touchCancel');
+  await p.evaluate(() => history.back());
+  await p.waitForTimeout(400);
+  assert.deepEqual(await look(), now, 'Back just after a touch was taken should keep the model as it was');
+  assert.equal(await p.evaluate(() => history.length), steps);
+  // The back arrow goes back to the gallery even then, and Forward opens the model again.
+  await touch('touchStart', at()); await touch('touchCancel');
+  await p.click('#back');
+  await p.waitForSelector('#home:not([hidden])', { timeout: 5000 }).catch(() => assert.fail('the back arrow just after a touch was taken should go to the gallery'));
+  await p.evaluate(() => history.forward());
+  await p.waitForSelector('#player:not([hidden])');
+  // A second after a touch was taken, Back goes to the gallery in one press.
+  await touch('touchStart', at()); await touch('touchCancel');
+  await p.waitForTimeout(1100);
+  await p.evaluate(() => history.back());
+  await p.waitForSelector('#home:not([hidden])', { timeout: 5000 }).catch(() => assert.fail('Back a while after a touch was taken should go to the gallery'));
+  await p.context().close();
+}
+
 // The single-file copy (npm run build) works straight from disk: it opens, folds a step, and asks for nothing.
 {
   execSync('node scripts/build.mjs', { cwd: root, stdio: 'pipe' });

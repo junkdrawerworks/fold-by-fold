@@ -7,6 +7,7 @@ import { View } from './render.js';
 import { picture, after } from './thumbs.js';
 import { diagram } from './flat.js';
 import { FINISHED } from './finished.js';
+import { guardEdges } from './edge-guard.js';
 
 const KEY = 'fold-by-fold.v1';
 const $ = (id) => document.getElementById(id);
@@ -1121,7 +1122,7 @@ function nameInAddress() {
     if (hash === addressed && !!history.state?.landed === landed) return;
     try {
       history.replaceState({ ...history.state, landed }, '', hash);
-      addressed = hash;
+      addressed = hash; here = history.state;
     } catch { /* rewritten too often: the next step catches it up */ }
   }, 300);
 }
@@ -1130,7 +1131,20 @@ function nameInAddress() {
 // where you are and Tab goes on from the top of the player. Otherwise the focus would fall to the page as the gallery
 // hides. A page opened at a model, from a link or a reload, leaves the focus where the browser puts it.
 let routed = false;
+// A finger turning the paper, or sliding along the steps or the slider, near the screen's side can set off Android's
+// back gesture (or Chrome's swipe to go back), which takes the touch and then goes Back. A web page can't keep those
+// gestures off its edges, so a Back that comes while a finger is on one of them, or within a second of the browser
+// taking a touch from one, is a slip: the model stays as it was, and its step goes back on the history. The page's own
+// way back (the back arrow, Escape) is never a slip. At any other time Back goes where it always has.
+const guard = guardEdges({ surfaces: [$('gl'), $('ticks'), $('scrub')], history: false });
+let here = null; // the history's state for the model on screen, to put back after a slip
+let ownBack = false; // the back arrow is on its way back through the history
 function route() {
+  if (!ownBack && !framed && !$('player').hidden && location.hash !== addressed && guard.slip()) {
+    try { history.pushState(here, '', addressed); } catch { /* no history to add to: the back arrow still works */ }
+    return;
+  }
+  ownBack = false;
   if (sheet.open) sheet.close(); // the browser's Back or Forward, say: the key was over the model left behind
   addressed = location.hash;
   const lost = routed && (!document.activeElement || document.activeElement === document.body || $('home').contains(document.activeElement));
@@ -1140,6 +1154,7 @@ function route() {
   const m = /^([a-z-]+?)(?:-(\d+))?$/.exec(h);
   if (m && MODELS.some((x) => x.id === m[1])) {
     openModel(m[1], m[2] ? +m[2] - 1 : null, { landed: !!m[2] && history.state?.landed === true });
+    here = history.state;
     if (lost && !$('player').hidden) $('modelName').focus({ preventScroll: true });
   } else {
     opening++; // a model still being folded isn't shown
@@ -1159,6 +1174,7 @@ function openFromHome(id) {
 // Opened from the gallery, the back arrow goes back to it the way the browser's Back does, so Back from
 // the gallery then leaves instead of reopening the model. Opened from a link, it shows the gallery in place.
 $('back').addEventListener('click', () => {
+  ownBack = true;
   if (framed) location.hash = '';
   else if (history.state?.from === 'home') history.back();
   else { history.replaceState(null, '', location.pathname + location.search); route(); }

@@ -73,6 +73,7 @@ The traditional frog is folded the way stiff paper allows, which differs a littl
 - `js/flat.js`: a step drawn flat with its marks, the way a printed diagram draws it, for printing a model's steps.
 - `js/thumbs.js`: the pictures of the finished models on the gallery's cards: from above for a model that ends flat, and in 3D, from where the player ends it, for one that ends standing up. The picture of each step's result beside the fold's name is drawn the same way. `js/finished.js`: their shapes, worked out ahead of time by `tools/make-thumbs.mjs`.
 - `js/app.js`: the page, the player and its controls.
+- `js/edge-guard.js`: keeps a swipe near the side of a phone's screen (Android's back gesture) from leaving the model mid-drag. Shared with the other junkdrawer.works projects.
 - `fonts/`: Shippori Mincho B1 and Zen Kaku Gothic New (SIL Open Font License), served from here so nothing loads from elsewhere.
 - `sw.js`: keeps a copy for using offline. `npm test` checks that it lists every file the page needs.
 - `tools/`: the screenshot and icon scripts, and `make-thumbs.mjs` for the gallery's pictures. `scripts/build.mjs`: the single-file build.
