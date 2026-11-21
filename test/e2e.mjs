@@ -2605,6 +2605,23 @@ for (const [width, height, id] of [[390, 844, 'crane'], [360, 780, 'crane'], [39
   await p.context().close();
 }
 
+// On a phone's touch screen, what a finger slides keeps clear of the screen's sides, where Android's back gesture starts:
+// the steps and the slider start 24 px in, and the paper takes no touch in the 24 px at either side (a swipe there is
+// the phone's own Back), though it's drawn to the edges as before. With a mouse, nothing starts at the side.
+for (const [width, height, touch] of [[320, 568, true], [360, 740, true], [390, 844, true], [390, 844, false]]) {
+  const p = await fresh('#crane-3', { viewport: { width, height }, hasTouch: touch, isMobile: touch });
+  await p.waitForFunction(() => fold.state.id === 'crane');
+  const got = await p.evaluate(() => {
+    const side = (q) => { const b = document.querySelector(q).getBoundingClientRect(); return Math.round(Math.min(b.left, innerWidth - b.right)); };
+    const s = document.getElementById('stage').getBoundingClientRect(), y = s.top + s.height / 2;
+    const paper = (x) => document.elementFromPoint(x, y)?.id === 'gl';
+    return { ticks: side('#ticks'), scrub: side('#scrub'), stage: side('#stage'), paper: [paper(2), paper(23), paper(25), paper(innerWidth - 25), paper(innerWidth - 23), paper(innerWidth - 2)] };
+  });
+  if (touch) assert.deepEqual(got, { ticks: 24, scrub: 24, stage: 0, paper: [false, false, true, true, false, false] }, `at ${width} px what a finger slides should keep 24 px from the screen's sides`);
+  else assert.deepEqual(got, { ticks: 16, scrub: 16, stage: 0, paper: [true, true, true, true, true, true] }, 'with a mouse the player should be as it was');
+  await p.context().close();
+}
+
 // The single-file copy (npm run build) works straight from disk: it opens, folds a step, and asks for nothing.
 {
   execSync('node scripts/build.mjs', { cwd: root, stdio: 'pipe' });

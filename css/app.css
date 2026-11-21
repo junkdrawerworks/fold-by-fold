@@ -426,6 +426,17 @@ html, body { overscroll-behavior-x: none; }
 .scrub input::-moz-range-thumb { width: 22px; height: 22px; border: 0; border-radius: 50%; background: var(--accent); box-shadow: var(--thumb); }
 /* From the keyboard, the ring goes round the thumb, not the whole slider. */
 .scrub input:focus-visible { outline: none; --thumb: 0 0 0 3px var(--bg), 0 0 0 6px var(--accent); }
+/* On a phone's touch screen, what a finger slides keeps 24 px from the screen's sides, clear of where Android's back
+   gesture starts: the steps and the slider (whose thumb starts each step at its left end) come in from the page's
+   16 px margin, and the paper takes no touch in the 24 px at either side of it. The paper still reaches the sides to
+   look at, and it sits in the middle, so a finger turning it starts well clear of them; a swipe from the side over it
+   is the phone's own Back, as anywhere else. */
+@media (pointer: coarse) and (max-width: 560px) {
+  .ticks, .scrub { margin-inline: 8px; }
+  .stage::before, .stage::after { content: ''; position: absolute; top: 0; bottom: 0; width: 24px; z-index: 1; touch-action: none; }
+  .stage::before { left: 0; }
+  .stage::after { right: 0; }
+}
 .controls { display: flex; align-items: center; gap: 10px; justify-content: center; }
 .ctl {
   appearance: none; border: 0; background: var(--chip); border-radius: 99px; min-width: 52px; height: 48px; padding: 0 14px;
