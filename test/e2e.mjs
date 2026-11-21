@@ -2593,6 +2593,18 @@ for (const [width, height, id] of [[390, 844, 'crane'], [360, 780, 'crane'], [39
   await q.context().close();
 }
 
+// A swipe sideways is nobody's, so it can't run on into Chrome's swipe to go Back or Forward: the page doesn't
+// overscroll, the paper takes every touch, and the steps and the slider take a sideways slide (the page can still
+// scroll up and down over them, where it's taller than the screen).
+{
+  const p = await fresh('#crane-3', { isMobile: true });
+  await p.waitForFunction(() => fold.state.id === 'crane');
+  const look = await p.evaluate(() => ['html', 'body', '#gl', '#ticks', '#scrub'].map((q) => { const c = getComputedStyle(document.querySelector(q)); return [q, c.overscrollBehaviorX, c.touchAction]; }));
+  assert.deepEqual(look.slice(0, 2).map(([q, o]) => [q, o]), [['html', 'none'], ['body', 'none']], 'the page should not overscroll sideways');
+  assert.deepEqual(look.slice(2).map(([q, , t]) => [q, t]), [['#gl', 'none'], ['#ticks', 'pan-y'], ['#scrub', 'pan-y']], 'the paper should take every touch, and the steps and slider a sideways slide');
+  await p.context().close();
+}
+
 // The single-file copy (npm run build) works straight from disk: it opens, folds a step, and asks for nothing.
 {
   execSync('node scripts/build.mjs', { cwd: root, stdio: 'pipe' });

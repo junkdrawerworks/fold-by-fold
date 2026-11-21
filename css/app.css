@@ -212,6 +212,9 @@ h1 {
 /* ---------- Player ---------- */
 /* A swipe down in the player is never meant to reload the page and lose the fold. */
 html:has(#player:not([hidden])) { overscroll-behavior-y: none; }
+/* Nor is a swipe sideways ever meant for the browser's Back or Forward (Chrome's overscroll navigation): a finger turning
+   the paper, or sliding along the steps or the slider, past the side of the screen would otherwise leave the model. */
+html, body { overscroll-behavior-x: none; }
 .player {
   height: 100dvh;
   display: grid;
@@ -406,7 +409,7 @@ html:has(#player:not([hidden])) { overscroll-behavior-y: none; }
    always was. */
 .scrub input {
   -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer;
-  width: 100%; margin: -8px 0; height: 44px; vertical-align: -8px;
+  width: 100%; margin: -8px 0; height: 44px; vertical-align: -8px; touch-action: pan-y; /* a finger slides along it */
   --track: color-mix(in srgb, var(--ink) 18%, transparent);
   --thumb: 0 0 0 3px var(--bg), 0 1px 4px rgba(0, 0, 0, .3);
 }
